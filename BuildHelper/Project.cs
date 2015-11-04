@@ -7,7 +7,7 @@ using System.Xml.Serialization;
 namespace BuildHelper
 {
     [Flags]
-    enum ProjectTypeEnum
+    public enum ProjectTypeEnum
     {
         None = 0,
         x86D = 1,
