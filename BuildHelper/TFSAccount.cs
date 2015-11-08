@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.TeamFoundation.VersionControl.Client;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -7,7 +8,6 @@ using System.Xml.Serialization;
 
 namespace BuildHelper
 {
-    [XmlInclude(typeof(TFSAccount))]
     public class TFSAccount : Notifier
     {
         string _UserName = String.Empty;
@@ -43,6 +43,13 @@ namespace BuildHelper
         {
             get { return _PassWord; }
             set { SetField(ref _PassWord, value); } 
+        }
+
+        GetOptions _FetchOptions = GetOptions.None;
+        public GetOptions FetchOptions
+        {
+            get { return _FetchOptions; }
+            set { SetField(ref _FetchOptions, value); }
         }
     }
 }

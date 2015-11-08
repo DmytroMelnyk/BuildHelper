@@ -106,11 +106,12 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="CfgMan.cs" />
+    <Compile Include="ConverterHelpers.cs" />
     <Compile Include="Notifier.cs" />
     <Compile Include="Project.cs" />
     <Compile Include="Stats.cs" />
     <Compile Include="TFSAccount.cs" />
-    <Compile Include="ViewModel.cs" />
+    <Compile Include="ApplicationViewModel.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>

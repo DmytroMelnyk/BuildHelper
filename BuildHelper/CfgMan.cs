@@ -1,21 +1,28 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Xml;
 using System.Xml.Serialization;
 
 namespace BuildHelper
 {
-    public class CfgMan
+    public class CfgMan : Notifier
     {
-        public List<Project> Prjcfg { get; set; }
-        public TFSAccount Tfscfg { get; set; }
-        private static string currentDir = Directory.GetCurrentDirectory();
+        static string currentDir = Directory.GetCurrentDirectory();
 
-        public CfgMan()
+        ObservableCollection<Project> _Prjcfg;
+        public ObservableCollection<Project> Prjcfg
         {
-            Prjcfg = new List<Project>();
-            Tfscfg = new TFSAccount();
+            get { return _Prjcfg; }
+            set { SetField(ref _Prjcfg, value); }
+        }
+
+        TFSAccount _Tfscfg;
+        public TFSAccount Tfscfg
+        {
+            get { return _Tfscfg; }
+            set { SetField(ref _Tfscfg, value); }
         }
 
         public void SaveConfig()
@@ -26,11 +33,11 @@ namespace BuildHelper
 
         public void LoadConfig()
         {
-            Prjcfg = Deserialize<List<Project>>("config.xml");
+            Prjcfg = Deserialize<ObservableCollection<Project>>("config.xml");
             Tfscfg = Deserialize<TFSAccount>("tfsconfig.xml");
         }
 
-        private void Serialize<T>(T cfg, string path)
+        void Serialize<T>(T cfg, string path)
         {
             try
             {
@@ -40,27 +47,22 @@ namespace BuildHelper
                     new XmlSerializer(typeof(T)).Serialize(writer, cfg);
                 }
             }
-            catch (Exception ex)
-            {
-                System.Windows.MessageBox.Show("Error during saving config: " + ex.Message);
-            }
+            catch { }
         }
-        private T Deserialize<T>(string path) where T: class, new()
+
+        T Deserialize<T>(string path) where T : class, new()
         {
             if (File.Exists(currentDir + @"\" + path))
             {
                 try
                 {
-                    using (FileStream fs = new FileStream(currentDir + @"\" + path, FileMode.OpenOrCreate))
+                    using (FileStream fs = new FileStream(currentDir + @"\" + path, FileMode.Open))
                     {
                         XmlReader reader = XmlReader.Create(fs);
                         return new XmlSerializer(typeof(T)).Deserialize(reader) as T;
                     }
                 }
-                catch (Exception ex)
-                {
-                    System.Windows.MessageBox.Show("Error during loading config: " + ex.Message);
-                }
+                catch { }
             }
             return new T();
         }

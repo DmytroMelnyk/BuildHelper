@@ -4,6 +4,9 @@
                       xmlns:wpfTool="clr-namespace:Xceed.Wpf.Toolkit;assembly=Xceed.Wpf.Toolkit"
                       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                       xmlns:Controls="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
+                      xmlns:tfs="clr-namespace:Microsoft.TeamFoundation.VersionControl.Client;assembly=Microsoft.TeamFoundation.VersionControl.Client"
+                      xmlns:sys="clr-namespace:System;assembly=mscorlib"
+                      xmlns:local="clr-namespace:BuildHelper"
                       Icon="icon.ico"
                       ResizeMode="CanResizeWithGrip"
                       Loaded="OnLoaded"
@@ -19,6 +22,7 @@
                       IconOverlayBehavior="Always">
     <Controls:MetroWindow.Resources>
         <Color x:Key="Color1">#19FFFFFF</Color>
+        <local:EnumToBooleanConverter x:Key="enumToBooleanConverter" />
     </Controls:MetroWindow.Resources>
     <Controls:MetroWindow.TaskbarItemInfo>
         <TaskbarItemInfo Description="Build Helper"
@@ -40,7 +44,7 @@
                 Width="126" />
         <Controls:ProgressRing x:Name="status_progressRing"
                                Foreground="{DynamicResource AccentColorBrush}"
-                               IsActive="False"
+                               IsActive="{Binding BuildsLaunched}"
                                Margin="0,0,10,73"
                                Height="120"
                                Width="126"
@@ -70,8 +74,7 @@
                                       VerticalAlignment="Top"
                                       Width="100"
                                       Foreground="White"
-                                      Checked="x64D_checkbox_CheckedChange"
-                                      Unchecked="x64D_checkbox_CheckedChange" />
+                                      IsChecked="{Binding ElementName=ProjectListBox, Path=SelectedItem.IsX64D}" />
                             <CheckBox x:Name="x64R_checkbox1"
                                       Content="Release x64"
                                       HorizontalAlignment="Center"
@@ -80,8 +83,7 @@
                                       VerticalAlignment="Top"
                                       Width="100"
                                       Foreground="#FFFDFDFD"
-                                      Checked="x64R_checkbox_CheckedChange"
-                                      Unchecked="x64R_checkbox_CheckedChange" />
+                                      IsChecked="{Binding ElementName=ProjectListBox, Path=SelectedItem.IsX64R}" />
                             <CheckBox x:Name="x86R_checkbox1"
                                       Content="Release x86"
                                       HorizontalAlignment="Center"
@@ -90,8 +92,7 @@
                                       Foreground="White"
                                       Width="100"
                                       Height="25"
-                                      Checked="x86R_checkbox_CheckedChange"
-                                      Unchecked="x86R_checkbox_CheckedChange" />
+                                      IsChecked="{Binding ElementName=ProjectListBox, Path=SelectedItem.IsX86R}" />
                             <CheckBox x:Name="x86D_checkbox1"
                                       Content="Debug x86"
                                       HorizontalAlignment="Center"
@@ -100,8 +101,7 @@
                                       Foreground="White"
                                       Width="100"
                                       Height="25"
-                                      Checked="x86D_checkbox_CheckedChange"
-                                      Unchecked="x86D_checkbox_CheckedChange" />
+                                      IsChecked="{Binding ElementName=ProjectListBox, Path=SelectedItem.IsX86D}" />
                         </Grid>
                     </GroupBox>
                     <Button x:Name="removeproject_button"
@@ -123,10 +123,46 @@
                            Width="191"
                            Background="{x:Null}"
                            FontFamily="Segoe UI, Lucida Sans Unicode, Verdana" />
-                    <ListBox x:Name="ProjectListBox"
-                             Margin="10,42,273,152"
-                             SelectionChanged="ProjectListBox_SelectionChanged"
-                             ItemsSource="{Binding config.Prjcfg}"/>
+                    <ListView x:Name="ProjectListBox"
+                              Margin="10,42,273,152"
+                              ItemsSource="{Binding config.Prjcfg}"
+                              SelectedIndex="{Binding SelectedIndex}"
+                              DisplayMemberPath="ProjectName">
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn Header="Project Name"
+                                                DisplayMemberBinding="{Binding ProjectName}" />
+                                <GridViewColumn Header="IsX64D">
+                                    <GridViewColumn.CellTemplate>
+                                        <ItemContainerTemplate>
+                                            <CheckBox IsChecked="{Binding IsX64D}" />
+                                        </ItemContainerTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                                <GridViewColumn Header="IsX64R">
+                                    <GridViewColumn.CellTemplate>
+                                        <ItemContainerTemplate>
+                                            <CheckBox IsChecked="{Binding IsX64R}" />
+                                        </ItemContainerTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                                <GridViewColumn Header="IsX86R">
+                                    <GridViewColumn.CellTemplate>
+                                        <ItemContainerTemplate>
+                                            <CheckBox IsChecked="{Binding IsX86R}" />
+                                        </ItemContainerTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                                <GridViewColumn Header="IsX86D">
+                                    <GridViewColumn.CellTemplate>
+                                        <ItemContainerTemplate>
+                                            <CheckBox IsChecked="{Binding IsX86D}" />
+                                        </ItemContainerTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
                     <Button x:Name="createProject_button"
                             Content="Add Project"
                             Margin="0,0,96,14"
@@ -140,7 +176,7 @@
                              Height="26"
                              Margin="10,0,96,105"
                              TextWrapping="Wrap"
-                             Text=""
+                             Text="{Binding ElementName=ProjectListBox, Path=SelectedItem.ProjectName}"
                              VerticalAlignment="Bottom"
                              Controls:TextBoxHelper.ClearTextButton="True"
                              Controls:TextBoxHelper.Watermark="Enter solution ID (e.g. DMS)" />
@@ -148,7 +184,7 @@
                              Height="26"
                              Margin="10,0,96,64"
                              TextWrapping="Wrap"
-                             Text=""
+                             Text="{Binding ElementName=ProjectListBox, Path=SelectedItem.ProjectPath}"
                              VerticalAlignment="Bottom"
                              Controls:TextBoxHelper.ClearTextButton="True"
                              IsReadOnly="True"
@@ -238,7 +274,7 @@
                                          VerticalAlignment="Top"
                                          Height="27"
                                          Controls:TextBoxHelper.Watermark="Enter user password"
-                                         MaxLength="14" 
+                                         MaxLength="14"
                                          PasswordChanged="pw_passwordbox_PasswordChanged" />
                             <Button x:Name="fetchcode_button"
                                     Content="fetch code"
@@ -258,6 +294,7 @@
                                          Width="98"
                                          ToolTip="Overwrite existing writable files if they conflict with the downloaded files."
                                          Foreground="White"
+                                         IsChecked="{Binding config.Tfscfg.FetchOptions, Converter={StaticResource enumToBooleanConverter}, ConverterParameter={x:Static tfs:GetOptions.Overwrite}}"
                                          GroupName="schedule_rbx_mutex" />
                             <RadioButton x:Name="noautroresolve_rbx"
                                          Content="No auto resolve"
@@ -267,6 +304,7 @@
                                          Height="25"
                                          Width="115"
                                          Foreground="#FFFDFDFD"
+                                         IsChecked="{Binding config.Tfscfg.FetchOptions, Converter={StaticResource enumToBooleanConverter}, ConverterParameter={x:Static tfs:GetOptions.NoAutoResolve}}"
                                          GroupName="schedule_rbx_mutex"
                                          ToolTip="Used only on the client. Instructs the client not to try to auto resolve conflicts" />
                             <RadioButton x:Name="none_rbx"
@@ -279,7 +317,7 @@
                                          GroupName="schedule_rbx_mutex"
                                          ToolTip="Autoresolve"
                                          Foreground="White"
-                                         IsChecked="True" />
+                                         IsChecked="{Binding config.Tfscfg.FetchOptions, Converter={StaticResource enumToBooleanConverter}, ConverterParameter={x:Static tfs:GetOptions.None}}" />
                             <Button x:Name="savetfscfg_btn"
                                     Content="Save config"
                                     Style="{StaticResource AccentedSquareButtonStyle}"
@@ -302,6 +340,7 @@
                                         HorizontalAlignment="Left"
                                         Width="169"
                                         Height="26"
+                                        Value="{Binding ScheduleTime}"
                                         VerticalAlignment="Top"></wpfTool:TimePicker>
                     <Button x:Name="runschedule_btn"
                             Content="run schedule"
@@ -317,9 +356,7 @@
                               Margin="21,76,0,0"
                               VerticalAlignment="Top"
                               Foreground="White"
-                              Checked="FetchCheckBox_Click"
-                              Unchecked="FetchCheckBox_Click"
-                              IsChecked="True" />
+                              IsChecked="{Binding FetchOnLaunch}" />
                 </Grid>
             </TabItem>
             <TabItem Header="Output">
@@ -328,9 +365,8 @@
                               Margin="3,3,3,3"
                               Background="{x:Null}"
                               BorderBrush="#FF0D82A4"
+                              ItemsSource="{Binding ProcessOutput}"
                               BorderThickness="2">
-                        <TextBlock Padding="0,0,10,0"
-                                   Text="{Binding Path=Color, Mode=Default}" />
                     </ListView>
                 </Grid>
             </TabItem>
@@ -381,14 +417,14 @@
             </TabItem>
 
         </Controls:MetroAnimatedSingleRowTabControl>
-        <Label x:Name="timer_label"
-               Content=""
-               Margin="0,0,10,42"
-               Foreground="White"
-               Height="25"
-               VerticalAlignment="Bottom"
-               HorizontalAlignment="Right"
-               Width="126" />
+        <TextBlock x:Name="timer_label"
+                   Margin="0,0,10,42"
+                   Foreground="White"
+                   Height="25"
+                   VerticalAlignment="Bottom"
+                   HorizontalAlignment="Right"
+                   Width="126"
+                   Text="{Binding TimeElapsed, StringFormat=hh\\:mm\\:ss}" />
     </Grid>
 
 </Controls:MetroWindow>

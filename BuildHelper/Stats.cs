@@ -11,7 +11,6 @@ namespace BuildHelper
         public double Dispersion
         {
             get { return Sigma * Sigma; }
-            set { }
         }
 
         public void Calculate(List<long> values)
