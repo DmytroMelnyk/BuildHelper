@@ -20,14 +20,29 @@ namespace BuildHelper
     /// </summary>
     public partial class MainWindow : MetroWindow
     {
+        public ProgressDialogController controller { get; set; }
+
         ApplicationViewModel ContextViewModel
         {
             get { return (ApplicationViewModel)DataContext; }
         }
 
-        private void OnLoaded(object sender, RoutedEventArgs e)
+        private async void OnLoaded(object sender, RoutedEventArgs e)
         {
             pw_passwordbox.Password = ContextViewModel.config.Tfscfg.PassWord;
+            ContextViewModel.Fetching += ContextViewModel_Fetching;
+            ContextViewModel.FetchCompleted += ContextViewModel_FetchCompleted;
+        }
+
+        async void ContextViewModel_FetchCompleted(object sender, EventArgs e)
+        {
+            await controller.CloseAsync();
+        }
+
+        void ContextViewModel_Fetching(object sender, FetchEventArgs e)
+        {
+            controller.SetProgress(e.Progress);
+            controller.SetMessage((e.Progress * 100).ToString());
         }
 
         public MainWindow()
@@ -53,11 +68,6 @@ namespace BuildHelper
         {
             ContextViewModel.config.Prjcfg.Remove((Project)ProjectListBox.SelectedItem);
             ContextViewModel.config.SaveConfig();
-        }
-
-        private async void FetchButton_OnClick(object sender, RoutedEventArgs e)
-        {
-            //await FetchCode();
         }
 
         private void rememberTFScfg_click(object sender, RoutedEventArgs e)
@@ -134,6 +144,12 @@ namespace BuildHelper
         private void pw_passwordbox_PasswordChanged(object sender, RoutedEventArgs e)
         {
             ContextViewModel.config.Tfscfg.PassWord = ((PasswordBox)e.Source).Password;
+        }
+
+        private async void fetchcode_button_Click(object sender, RoutedEventArgs e)
+        {
+            controller = await this.ShowProgressAsync("Please wait", "Downloading...", false);
+            await ContextViewModel.FetchAsync();
         }
     }
 }

@@ -30,10 +30,11 @@ namespace BuildHelper
 
             dynamic dFlag = flag;
             T newFlagField = setFlag ? (flagField | dFlag) : (flagField & ~dFlag);
-            if (!EqualityComparer<T>.Default.Equals(flagField, newFlagField))
+            SetField<T>(ref flagField, newFlagField, propertyName);
+
+            unchecked
             {
-                flagField = newFlagField;
-                PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
+
             }
 
             //or we can use smth. like this:
@@ -42,7 +43,6 @@ namespace BuildHelper
             //    UInt64 uFlag = flag.ToUInt64(null);
             //    UInt64 uOldFlagField = flagField.ToUInt64(null);
             //    UInt64 uNewFlagField = setFlag ? (uOldFlagField | uFlag) : (uOldFlagField & ~uFlag);
-
             //    if (uOldFlagField != uNewFlagField)
             //    {
             //        flagField = (T)Enum.ToObject(type, uNewFlagField);

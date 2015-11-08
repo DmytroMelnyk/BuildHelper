@@ -1,5 +1,4 @@
-﻿using MahApps.Metro.Controls.Dialogs;
-using Microsoft.TeamFoundation.Client;
+﻿using Microsoft.TeamFoundation.Client;
 using Microsoft.TeamFoundation.VersionControl.Client;
 using System;
 using System.Collections.Generic;
@@ -8,15 +7,58 @@ using System.Diagnostics;
 using System.Linq;
 using System.Management;
 using System.Net;
-using System.Text;
 using System.Threading.Tasks;
-using System.Windows.Controls;
 using System.Windows.Threading;
 
 namespace BuildHelper
 {
     class ApplicationViewModel : Notifier
     {
+        public event EventHandler<FetchEventArgs> Fetching = delegate { };
+        public event EventHandler FetchCompleted = delegate { };
+
+        GetStatus Fetch()
+        {
+            ICredentials myCred = new NetworkCredential(config.Tfscfg.UserName, config.Tfscfg.PassWord);
+            TfsTeamProjectCollection tfs = new TfsTeamProjectCollection(new Uri(config.Tfscfg.TfsPath), myCred);
+            tfs.EnsureAuthenticated();
+            VersionControlServer vcs = tfs.GetService<VersionControlServer>();
+            vcs.Getting += OnGettingEvent;
+            Workspace myWorkspace = vcs.GetWorkspace(config.Tfscfg.TfsWorkspace, vcs.AuthorizedUser);
+            GetRequest request = new GetRequest(new ItemSpec(config.Tfscfg.RequestPath, RecursionType.Full), VersionSpec.Latest);
+            FetchCompleted(this, EventArgs.Empty);
+            return myWorkspace.Get(request, config.Tfscfg.FetchOptions);
+        }
+
+        private void OnGettingEvent(object sender, GettingEventArgs status)
+        {
+            if (status.Total == 0)
+                return;
+            int current = (int)status.GetType().GetProperty("Current").GetValue(status, null);
+            int progress = (current / status.Total);
+            Fetching(this, new FetchEventArgs(progress));
+        }
+
+        public async Task FetchAsync()
+        {
+            GetStatus getStat = null;
+            try
+            {
+                getStat = await Task.Run(() => Fetch());
+            }
+            catch { }
+            if (getStat == null || getStat.NumFailures > 0 || getStat.NumWarnings > 0)
+            {
+                ProcessOutput.Add("Errors while getting latest have occurred");
+                return;
+            }
+
+            if (getStat.NumOperations == 0)
+                ProcessOutput.Add("All files are up to date");
+            else
+                ProcessOutput.Add("Successfully downloaded code");
+        }
+
         CfgMan _config = new CfgMan();
         public CfgMan config
         {
@@ -187,7 +229,6 @@ namespace BuildHelper
         public DispatcherTimer ScheduleTimer { get; set; }
         public DateTime startTime { get; set; }
         public DateTime projstarttime { get; set; }
-        public ProgressDialogController controller { get; set; }
 
         public ApplicationViewModel()
         {
@@ -224,7 +265,7 @@ namespace BuildHelper
                 //controller = await this.ShowProgressAsync("Please wait", "Downloading...", true);
                 //GetOptions opts = GetFetchOptions();
                 //await Task.Run(() => FetchCode(userName, userPass, tfsPath, tfsWorkSpace, requestPath, opts));
-                await controller.CloseAsync();
+                //await controller.CloseAsync();
             }
             //launch builds
             SwitchBuild();
@@ -253,66 +294,6 @@ namespace BuildHelper
                 sched_time = sched_time.AddDays(1.0);
 
             return sched_time - now;
-        }
-
-        private async Task FetchCode()
-        {
-            string userName = config.Tfscfg.UserName;
-            string userPass = config.Tfscfg.PassWord;
-            string tfsPath = config.Tfscfg.TfsPath;
-            string tfsWorkSpace = config.Tfscfg.TfsWorkspace;
-            string requestPath = config.Tfscfg.RequestPath;
-            GetOptions opts = config.Tfscfg.FetchOptions;
-
-            //controller = await this.ShowProgressAsync("Please wait", "Downloading...", false);
-            
-            GetStatus getStat = null;
-            try
-            {
-                ICredentials myCred = new NetworkCredential(userName, userPass);
-                TfsTeamProjectCollection tfs = new TfsTeamProjectCollection(new Uri(tfsPath), myCred);
-                tfs.EnsureAuthenticated();
-                VersionControlServer vcs = tfs.GetService<VersionControlServer>();
-                Workspace myWorkspace = vcs.GetWorkspace(tfsWorkSpace, vcs.AuthorizedUser);
-                vcs.Getting += OnGettingEvent;
-                GetRequest request = new GetRequest(new ItemSpec(requestPath, RecursionType.Full), VersionSpec.Latest);
-
-                getStat = myWorkspace.Get(request, opts);
-            }
-            catch (Exception ex)
-            {
-                ProcessOutput.Add("Fetching code failed with exception: " + ex.Message);
-                return;
-            }
-            if (getStat == null || getStat.NumFailures > 0 || getStat.NumWarnings > 0)
-            {
-                ProcessOutput.Add("Errors while getting latest have occurred");
-                return;
-            }
-
-            if (getStat.NumOperations == 0)
-                ProcessOutput.Add("All files are up to date");
-            else
-                ProcessOutput.Add("Successfully downloaded code");
-
-            await controller.CloseAsync();
-        }
-
-        private void OnGettingEvent(object sender, GettingEventArgs status)
-        {
-            if (status.Total == 0)
-                return;
-            int current = (int)status.GetType().GetProperty("Current").GetValue(status, null);
-            int progress = (current / status.Total);
-            //using (StreamWriter w = File.AppendText("OnGetting.txt"))
-            //{
-            //    w.WriteLine(progress.ToString());
-            //}
-            //this.Dispatcher.Invoke(() =>
-            //{
-            //    ContextViewModel.controller.SetProgress(progress);
-            //    ContextViewModel.controller.SetMessage((progress * 100).ToString());
-            //});
         }
     }
 }

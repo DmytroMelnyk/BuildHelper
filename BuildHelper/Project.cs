@@ -16,7 +16,6 @@ namespace BuildHelper
         x64R = 8
     }
 
-    [XmlInclude(typeof(Project))]
     public class Project : Notifier
     {
         string _ProjectName = String.Empty;
