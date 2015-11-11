@@ -21,46 +21,15 @@ namespace BuildHelper
             }
         }
 
-        protected virtual void SetField<T>(ref T flagField, bool setFlag, T flag, [CallerMemberName] string propertyName = null) 
-            where T: struct, IConvertible
+        protected virtual void SetField<T>(ref T flagField, bool setFlag, T flag, [CallerMemberName] string propertyName = null)
+            where T : struct, IComparable, IFormattable, IConvertible
         {
-            Type type = typeof(T);
-            if (!type.IsEnum || !type.GetCustomAttributes(typeof(FlagsAttribute), false).Any())
+            if (!typeof(T).GetCustomAttributes(typeof(FlagsAttribute), false).Any())
                 throw new ArgumentException("Type should be flagged enum");
 
             dynamic dFlag = flag;
             T newFlagField = setFlag ? (flagField | dFlag) : (flagField & ~dFlag);
             SetField<T>(ref flagField, newFlagField, propertyName);
-
-            unchecked
-            {
-
-            }
-
-            //or we can use smth. like this:
-            //if (Type.GetTypeCode(Enum.GetUnderlyingType(type)) == TypeCode.UInt64)
-            //{
-            //    UInt64 uFlag = flag.ToUInt64(null);
-            //    UInt64 uOldFlagField = flagField.ToUInt64(null);
-            //    UInt64 uNewFlagField = setFlag ? (uOldFlagField | uFlag) : (uOldFlagField & ~uFlag);
-            //    if (uOldFlagField != uNewFlagField)
-            //    {
-            //        flagField = (T)Enum.ToObject(type, uNewFlagField);
-            //    }
-            //}
-            //else
-            //{
-            //    var aaa = (T)Convert.ChangeType(flag, Enum.GetUnderlyingType(type));
-
-            //    Int64 uFlag = flag.ToInt64(null);
-            //    Int64 uOldFlagField = flagField.ToInt64(null);
-            //    Int64 uNewFlagField = setFlag ? (uOldFlagField | uFlag) : (uOldFlagField & ~uFlag);
-
-            //    if (uOldFlagField != uNewFlagField)
-            //    {
-            //        flagField = (T)Enum.ToObject(type, uNewFlagField);
-            //    }
-            //}
         }
     }
 }

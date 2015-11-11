@@ -12,6 +12,7 @@ using System.Net;
 using Microsoft.TeamFoundation.Client;
 using Microsoft.TeamFoundation.VersionControl.Client;
 using System.Management;
+using Microsoft.Win32;
 
 namespace BuildHelper
 {
@@ -27,18 +28,6 @@ namespace BuildHelper
             get { return (ApplicationViewModel)DataContext; }
         }
 
-        private async void OnLoaded(object sender, RoutedEventArgs e)
-        {
-            pw_passwordbox.Password = ContextViewModel.config.Tfscfg.PassWord;
-            ContextViewModel.Fetching += ContextViewModel_Fetching;
-            ContextViewModel.FetchCompleted += ContextViewModel_FetchCompleted;
-        }
-
-        async void ContextViewModel_FetchCompleted(object sender, EventArgs e)
-        {
-            await controller.CloseAsync();
-        }
-
         void ContextViewModel_Fetching(object sender, FetchEventArgs e)
         {
             controller.SetProgress(e.Progress);
@@ -49,6 +38,10 @@ namespace BuildHelper
         {
             InitializeComponent();
             DataContext = new ApplicationViewModel();
+            pw_passwordbox.Password = ContextViewModel.config.Tfscfg.PassWord;
+            ContextViewModel.FetchBegin += async (s, e) => controller = await this.ShowProgressAsync("Please wait", "Downloading...", false);
+            ContextViewModel.Fetching += ContextViewModel_Fetching;
+            ContextViewModel.FetchCompleted += async (s, e) => await controller.CloseAsync();
         }
 
         private void LaunchButton_OnClick(object sender, EventArgs e)
@@ -58,22 +51,17 @@ namespace BuildHelper
 
         private void createProject_button_Click(object sender, RoutedEventArgs e)
         {
-            var temp = new Project();
-            ContextViewModel.config.Prjcfg.Add(temp);
-            ProjectListBox.SelectedItem = temp;
-            ContextViewModel.config.SaveConfig();
+            ContextViewModel.AddProject();
         }
 
         private void removeproject_button_Click(object sender, RoutedEventArgs e)
         {
-            ContextViewModel.config.Prjcfg.Remove((Project)ProjectListBox.SelectedItem);
-            ContextViewModel.config.SaveConfig();
+            ContextViewModel.RemoveProject();
         }
 
         private void rememberTFScfg_click(object sender, RoutedEventArgs e)
         {
             ContextViewModel.config.Tfscfg.PassWord = pw_passwordbox.Password;
-            ContextViewModel.config.SaveConfig();
         }
 
         private void On_moveup(object sender, RoutedEventArgs e)
@@ -88,57 +76,25 @@ namespace BuildHelper
 
         private void filedialog_button_Click(object sender, RoutedEventArgs e)
         {
-            Microsoft.Win32.OpenFileDialog dlg = new Microsoft.Win32.OpenFileDialog();
-            // Set filter for file extension and default file extension 
-            dlg.DefaultExt = ".sln";
-            dlg.Filter = "Solution Files |*.sln";
+            OpenFileDialog dlg = new OpenFileDialog
+            {
+                DefaultExt = ".sln",
+                Filter = "Solution Files |*.sln"
+            };
 
             bool? result = dlg.ShowDialog();
             if (result == true)
                 Projectpath_textbox.Text = dlg.FileName;
         }
 
-        private void RunDaily()
-        {
-            if (m_timepicker.Value == null)
-                return;
-
-            //ContextViewModel.ScheduleTimer.Interval = GetTriggerTimeSpan();
-            //ContextViewModel.ScheduleTimer.Start();
-        }
-
         private void runschedule_btn_Click(object sender, RoutedEventArgs e)
         {
-            if (m_timepicker.Value == null)
-            {
-                System.Windows.MessageBox.Show("Pick scheduled time");
-                return;
-            }
-            if (ContextViewModel.ScheduleTimer.IsEnabled)
-            {
-                ContextViewModel.ScheduleTimer.Stop();
-                runschedule_btn.Content = "schedule";
-                Launch.IsEnabled = true;
-            }
-            else
-            {
-                RunDaily();
-                runschedule_btn.Content = "cancel";
-                Launch.IsEnabled = false;
-            }
+            ContextViewModel.RunSchedule();
         }
 
         private void calculatestats_btn_Click(object sender, RoutedEventArgs e)
         {
-            if (ProjectListBox.SelectedIndex >= 0)
-            {
-                Stats stats = new Stats();
-                stats.Calculate((ProjectListBox.Items[ProjectListBox.SelectedIndex] as Project).BuildTimes);
-                TimeSpan mutime = new TimeSpan((long)stats.Mu);
-                TimeSpan sigmatime = new TimeSpan((long)stats.Sigma);
-                mu_tbx.Text = mutime.ToString(@"hh':'mm':'ss");
-                sigma_tbx.Text = sigmatime.ToString(@"hh':'mm':'ss");
-            }
+            ContextViewModel.CalculateStats();
         }
 
         private void pw_passwordbox_PasswordChanged(object sender, RoutedEventArgs e)
@@ -148,7 +104,6 @@ namespace BuildHelper
 
         private async void fetchcode_button_Click(object sender, RoutedEventArgs e)
         {
-            controller = await this.ShowProgressAsync("Please wait", "Downloading...", false);
             await ContextViewModel.FetchAsync();
         }
     }

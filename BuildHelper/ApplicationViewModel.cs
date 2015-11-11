@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Management;
 using System.Net;
+using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows.Threading;
 
@@ -16,47 +17,41 @@ namespace BuildHelper
     {
         public event EventHandler<FetchEventArgs> Fetching = delegate { };
         public event EventHandler FetchCompleted = delegate { };
+        public event EventHandler FetchBegin = delegate { };
 
-        GetStatus Fetch()
+        private TimeSpan _MuTime;
+        public TimeSpan MuTime
         {
-            ICredentials myCred = new NetworkCredential(config.Tfscfg.UserName, config.Tfscfg.PassWord);
-            TfsTeamProjectCollection tfs = new TfsTeamProjectCollection(new Uri(config.Tfscfg.TfsPath), myCred);
-            tfs.EnsureAuthenticated();
-            VersionControlServer vcs = tfs.GetService<VersionControlServer>();
-            vcs.Getting += OnGettingEvent;
-            Workspace myWorkspace = vcs.GetWorkspace(config.Tfscfg.TfsWorkspace, vcs.AuthorizedUser);
-            GetRequest request = new GetRequest(new ItemSpec(config.Tfscfg.RequestPath, RecursionType.Full), VersionSpec.Latest);
-            FetchCompleted(this, EventArgs.Empty);
-            return myWorkspace.Get(request, config.Tfscfg.FetchOptions);
+            get { return _MuTime; }
+            set { SetField(ref _MuTime, value); }
         }
 
-        private void OnGettingEvent(object sender, GettingEventArgs status)
+        private TimeSpan _SigmaTime;
+        public TimeSpan SigmaTime
         {
-            if (status.Total == 0)
-                return;
-            int current = (int)status.GetType().GetProperty("Current").GetValue(status, null);
-            int progress = (current / status.Total);
-            Fetching(this, new FetchEventArgs(progress));
+            get { return _SigmaTime; }
+            set { SetField(ref _SigmaTime, value); }
         }
 
-        public async Task FetchAsync()
+        bool? _FetchOnLaunch = false;
+        public bool? FetchOnLaunch
         {
-            GetStatus getStat = null;
-            try
-            {
-                getStat = await Task.Run(() => Fetch());
-            }
-            catch { }
-            if (getStat == null || getStat.NumFailures > 0 || getStat.NumWarnings > 0)
-            {
-                ProcessOutput.Add("Errors while getting latest have occurred");
-                return;
-            }
+            get { return _FetchOnLaunch; }
+            set { SetField(ref _FetchOnLaunch, value); }
+        }
 
-            if (getStat.NumOperations == 0)
-                ProcessOutput.Add("All files are up to date");
-            else
-                ProcessOutput.Add("Successfully downloaded code");
+        DateTime? _ScheduleTime;
+        public DateTime? ScheduleTime
+        {
+            get { return _ScheduleTime; }
+            set { SetField(ref _ScheduleTime, value); }
+        }
+
+        TimeSpan? _TimeElapsed;
+        public TimeSpan? TimeElapsed
+        {
+            get { return _TimeElapsed; }
+            set { SetField(ref _TimeElapsed, value); }
         }
 
         CfgMan _config = new CfgMan();
@@ -66,11 +61,25 @@ namespace BuildHelper
             set { SetField(ref _config, value); }
         }
 
-        public bool _BuildsLaunched = false;
+        bool _BuildsLaunched = false;
         public bool BuildsLaunched
         {
             get { return _BuildsLaunched; }
             set { SetField(ref _BuildsLaunched, value); }
+        }
+
+        ObservableCollection<string> _ProcessOutput = new ObservableCollection<string>();
+        public ObservableCollection<string> ProcessOutput
+        {
+            get { return _ProcessOutput; }
+            set { SetField(ref _ProcessOutput, value); }
+        }
+
+        int _SelectedIndex = -1;
+        public int SelectedIndex
+        {
+            get { return _SelectedIndex; }
+            set { SetField(ref _SelectedIndex, value); }
         }
 
         Queue<Process> _BuildQueue = new Queue<Process>();
@@ -104,6 +113,53 @@ namespace BuildHelper
                 }
                 return _BuildQueue;
             }
+        }
+
+        GetStatus Fetch()
+        {
+            ICredentials myCred = new NetworkCredential(config.Tfscfg.UserName, config.Tfscfg.PassWord);
+            TfsTeamProjectCollection tfs = new TfsTeamProjectCollection(new Uri(config.Tfscfg.TfsPath), myCred);
+            tfs.EnsureAuthenticated();
+            VersionControlServer vcs = tfs.GetService<VersionControlServer>();
+            vcs.Getting += OnGettingEvent;
+            Workspace myWorkspace = vcs.GetWorkspace(config.Tfscfg.TfsWorkspace, vcs.AuthorizedUser);
+            GetRequest request = new GetRequest(new ItemSpec(config.Tfscfg.RequestPath, RecursionType.Full), VersionSpec.Latest);
+            return myWorkspace.Get(request, config.Tfscfg.FetchOptions);
+        }
+
+        private void OnGettingEvent(object sender, GettingEventArgs status)
+        {
+            if (status.Total == 0)
+                return;
+
+            double current = (int)typeof(GettingEventArgs).GetProperty("Current", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(status, null);
+            double progress = (current / status.Total);
+            Fetching(this, new FetchEventArgs(progress));
+        }
+
+        public async Task FetchAsync()
+        {
+            GetStatus getStat = null;
+            try
+            {
+                FetchBegin(this, EventArgs.Empty);
+                getStat = await Task.Run(() => Fetch());
+            }
+            catch { }
+            finally
+            {
+                FetchCompleted(this, EventArgs.Empty);
+            }
+            if (getStat == null || getStat.NumFailures > 0 || getStat.NumWarnings > 0)
+            {
+                ProcessOutput.Add("Errors while getting latest have occurred");
+                return;
+            }
+
+            if (getStat.NumOperations == 0)
+                ProcessOutput.Add("All files are up to date");
+            else
+                ProcessOutput.Add("Successfully downloaded code");
         }
 
         private void ProcExited(object sender, EventArgs e)
@@ -154,13 +210,6 @@ namespace BuildHelper
             catch { }
         }
 
-        ObservableCollection<string> _ProcessOutput = new ObservableCollection<string>();
-        public ObservableCollection<string> ProcessOutput
-        {
-            get { return _ProcessOutput; }
-            set { SetField(ref _ProcessOutput, value); }
-        }
-
         void StopBuild()
         {
             BuildsLaunched = false;
@@ -171,11 +220,15 @@ namespace BuildHelper
             ScheduleTimer.Stop();
         }
 
-        int _SelectedIndex = -1;
-        public int SelectedIndex
+        public void AddProject()
         {
-            get { return _SelectedIndex; }
-            set { SetField(ref _SelectedIndex, value); }
+            config.Prjcfg.Add(new Project());
+            SelectedIndex = config.Prjcfg.Count - 1;
+        }
+
+        public void RemoveProject()
+        {
+            config.Prjcfg.RemoveAt(SelectedIndex);
         }
 
         public void MoveItem(int direction)
@@ -240,14 +293,7 @@ namespace BuildHelper
             ScheduleTimer.Tick += Scheduletimer_Tick;
         }
 
-        TimeSpan? _TimeElapsed;
-        public TimeSpan? TimeElapsed
-        {
-            get { return _TimeElapsed; }
-            set { SetField(ref _TimeElapsed, value); }
-        }
-
-        private async void Scheduletimer_Tick(object sender, EventArgs e)
+        async void Scheduletimer_Tick(object sender, EventArgs e)
         {
             ScheduleTimer.Stop();
             ScheduleTimer.Interval = GetTriggerTimeSpan(); //set next tick timespan
@@ -255,34 +301,10 @@ namespace BuildHelper
 
             //fetch code option checked
             if (FetchOnLaunch == true)
-            {
-                string userName = config.Tfscfg.UserName;
-                string userPass = config.Tfscfg.PassWord;
-                string tfsPath = config.Tfscfg.TfsPath;
-                string tfsWorkSpace = config.Tfscfg.TfsWorkspace;
-                string requestPath = config.Tfscfg.RequestPath;
-
-                //controller = await this.ShowProgressAsync("Please wait", "Downloading...", true);
-                //GetOptions opts = GetFetchOptions();
-                //await Task.Run(() => FetchCode(userName, userPass, tfsPath, tfsWorkSpace, requestPath, opts));
-                //await controller.CloseAsync();
-            }
+                await FetchAsync();
+            
             //launch builds
             SwitchBuild();
-        }
-
-        bool? _FetchOnLaunch = false;
-        public bool? FetchOnLaunch 
-        {
-            get { return _FetchOnLaunch; }
-            set { SetField(ref _FetchOnLaunch, value); }
-        }
-
-        DateTime? _ScheduleTime;
-        public DateTime? ScheduleTime
-        {
-            get { return _ScheduleTime; }
-            set { SetField(ref _ScheduleTime, value); }
         }
 
         TimeSpan GetTriggerTimeSpan()
@@ -294,6 +316,38 @@ namespace BuildHelper
                 sched_time = sched_time.AddDays(1.0);
 
             return sched_time - now;
+        }
+
+        void RunDaily()
+        {
+            if (ScheduleTime.Value == null)
+                return;
+
+            ScheduleTimer.Interval = GetTriggerTimeSpan();
+            ScheduleTimer.Start();
+        }
+
+        public void RunSchedule()
+        {
+            if (ScheduleTimer.IsEnabled)
+            {
+                ScheduleTimer.Stop();
+            }
+            else
+            {
+                RunDaily();
+            }
+        }
+
+        public void CalculateStats()
+        {
+            if (SelectedIndex >= 0)
+            {
+                Stats stats = new Stats();
+                stats.Calculate(config.Prjcfg[SelectedIndex].BuildTimes);
+                MuTime = new TimeSpan((long)stats.Mu);
+                SigmaTime = new TimeSpan((long)stats.Sigma);
+            }
         }
     }
 }
