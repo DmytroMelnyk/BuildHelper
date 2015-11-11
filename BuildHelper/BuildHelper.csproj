@@ -117,16 +117,15 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Compile Include="CfgMan.cs" />
-    <Compile Include="ConverterHelpers.cs" />
+    <Compile Include="ViewModel\CfgMan.cs" />
+    <Compile Include="Helpers\ConverterHelpers.cs" />
+    <Compile Include="Helpers\DialogService.cs" />
     <Compile Include="FetchEventArgs.cs" />
-    <Compile Include="Notifier.cs" />
-    <Compile Include="Project.cs" />
-    <Compile Include="Stats.cs" />
-    <Compile Include="TFSAccount.cs" />
-    <Compile Include="ApplicationViewModel.cs" />
-    <Compile Include="ViewModel\MainViewModel.cs" />
-    <Compile Include="ViewModel\ViewModelLocator.cs" />
+    <Compile Include="ViewModel\Notifier.cs" />
+    <Compile Include="ViewModel\Project.cs" />
+    <Compile Include="ViewModel\Stats.cs" />
+    <Compile Include="ViewModel\TFSAccount.cs" />
+    <Compile Include="ViewModel\ApplicationViewModel.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>

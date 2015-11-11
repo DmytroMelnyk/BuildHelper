@@ -23,6 +23,11 @@
         <Color x:Key="Color1">#19FFFFFF</Color>
         <local:EnumToBooleanConverter x:Key="enumToBooleanConverter" />
     </Controls:MetroWindow.Resources>
+
+    <Controls:MetroWindow.DataContext>
+        <local:ApplicationViewModel />
+    </Controls:MetroWindow.DataContext>
+    
     <Controls:MetroWindow.TaskbarItemInfo>
         <TaskbarItemInfo Description="Build Helper"
                          ProgressState="None" />
@@ -33,7 +38,7 @@
             <RowDefinition />
         </Grid.RowDefinitions>
         <Button x:Name="Launch"
-                Click="LaunchButton_OnClick"
+                Command="{Binding StartStopBuildCommand}"
                 Margin="0,0,10,10"
                 Height="28"
                 VerticalAlignment="Bottom"
@@ -41,8 +46,6 @@
                 Width="126">
             <Button.Style>
                 <Style BasedOn="{StaticResource AccentedSquareButtonStyle}" TargetType="{x:Type Button}">
-                    <Setter Property="IsEnabled"
-                            Value="True" />
                     <Setter Property="Content"
                             Value="LAUNCH BUILDS" />
                     <Style.Triggers>
@@ -53,8 +56,6 @@
                         </DataTrigger>
                         <DataTrigger Binding="{Binding config.Prjcfg.Count}"
                                      Value="0">
-                            <Setter Property="IsEnabled"
-                                    Value="False" />
                         </DataTrigger>
                     </Style.Triggers>
                 </Style>
@@ -82,6 +83,18 @@
                               Margin="0,42,46,0"
                               VerticalAlignment="Top"
                               Width="135">
+                        <GroupBox.Style>
+                            <Style BasedOn="{StaticResource MetroGroupBox}"
+                                   TargetType="{x:Type GroupBox}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedIndex}"
+                                                 Value="-1">
+                                        <Setter Property="IsEnabled"
+                                                Value="False" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </GroupBox.Style>
                         <Grid x:Name="grpboxGrid1"
                               Margin="-3,2,-2,2">
                             <CheckBox x:Name="x64D_checkbox1"
@@ -130,7 +143,7 @@
                             VerticalAlignment="Bottom"
                             HorizontalAlignment="Right"
                             Width="106"
-                            Click="removeproject_button_Click" />
+                            Command="{Binding RemoveProjectCommand}" />
                     <Label x:Name="choosesol_label"
                            Content="Choose Solution:"
                            Foreground="White"
@@ -189,7 +202,7 @@
                             VerticalAlignment="Bottom"
                             HorizontalAlignment="Right"
                             Width="116"
-                            Click="createProject_button_Click" />
+                            Command="{Binding AddProjectCommand}" />
                     <TextBox x:Name="Projectname_textbox"
                              Height="26"
                              Margin="10,0,96,105"
@@ -217,19 +230,19 @@
                             Width="50"
                             Background="#FF39B6EC"
                             RenderTransformOrigin="0.491,1.84"
-                            Click="On_moveup" />
+                            Command="{Binding MoveItemUpCommand}" />
                     <Button x:Name="movedown_button"
                             Content="DOWN"
                             Margin="0,0,218,218"
                             Background="#FF39B6EC"
-                            Click="On_movedown"
+                            Command="{Binding MoveItemDownCommand}"
                             HorizontalAlignment="Right"
                             Width="50"
                             Height="26"
                             VerticalAlignment="Bottom" />
                     <Button x:Name="filedialog_button"
                             Margin="0,0,46,54"
-                            Click="filedialog_button_Click"
+                            Command="{Binding SetProjectPathCommand}"
                             BorderBrush="{x:Null}"
                             Background="{x:Null}"
                             Focusable="False"
@@ -293,7 +306,8 @@
                                          Height="27"
                                          Controls:TextBoxHelper.Watermark="Enter user password"
                                          MaxLength="14"
-                                         PasswordChanged="pw_passwordbox_PasswordChanged" />
+                                         PasswordChanged="pw_passwordbox_PasswordChanged"
+                                         Initialized="pw_passwordbox_Initialized"/>
                             <Button x:Name="fetchcode_button"
                                     Content="fetch code"
                                     Style="{StaticResource AccentedSquareButtonStyle}"
@@ -302,7 +316,7 @@
                                     VerticalAlignment="Bottom"
                                     HorizontalAlignment="Right"
                                     Width="97"
-                                    Click="fetchcode_button_Click" />
+                                    Command="{Binding FetchCommand}" />
                             <RadioButton x:Name="overwrite_rbx"
                                          Content="Overwrite"
                                          HorizontalAlignment="Left"
@@ -340,7 +354,6 @@
                                     Content="Save config"
                                     Style="{StaticResource AccentedSquareButtonStyle}"
                                     Margin="0,0,141,10"
-                                    Click="rememberTFScfg_click"
                                     HorizontalAlignment="Right"
                                     Width="97"
                                     Height="28"
@@ -371,7 +384,7 @@
                             Margin="262,30,0,0"
                             VerticalAlignment="Top"
                             Width="113"
-                            Click="runschedule_btn_Click"
+                            Command="{Binding RunScheduleCommand}"
                             Grid.ColumnSpan="2" />
                     <CheckBox x:Name="FetchOnLaunch_checkbox"
                               Content="Fetch on scheduled"
@@ -437,7 +450,7 @@
                             Margin="178,24,0,0"
                             VerticalAlignment="Top"
                             Width="114"
-                            Click="calculatestats_btn_Click" />
+                            Command="{Binding CalculateStatsCommand}" />
                 </Grid>
             </TabItem>
 

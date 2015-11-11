@@ -1,4 +1,5 @@
-﻿using Microsoft.TeamFoundation.Client;
+﻿using GalaSoft.MvvmLight.Command;
+using Microsoft.TeamFoundation.Client;
 using Microsoft.TeamFoundation.VersionControl.Client;
 using System;
 using System.Collections.Generic;
@@ -8,17 +9,15 @@ using System.Linq;
 using System.Management;
 using System.Net;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Input;
 using System.Windows.Threading;
 
 namespace BuildHelper
 {
     class ApplicationViewModel : Notifier
     {
-        public event EventHandler<FetchEventArgs> Fetching = delegate { };
-        public event EventHandler FetchCompleted = delegate { };
-        public event EventHandler FetchBegin = delegate { };
-
         private TimeSpan _MuTime;
         public TimeSpan MuTime
         {
@@ -44,7 +43,11 @@ namespace BuildHelper
         public DateTime? ScheduleTime
         {
             get { return _ScheduleTime; }
-            set { SetField(ref _ScheduleTime, value); }
+            set 
+            {
+                SetField(ref _ScheduleTime, value);
+                ((RelayCommand)RunScheduleCommand).RaiseCanExecuteChanged();
+            }
         }
 
         TimeSpan? _TimeElapsed;
@@ -79,9 +82,133 @@ namespace BuildHelper
         public int SelectedIndex
         {
             get { return _SelectedIndex; }
-            set { SetField(ref _SelectedIndex, value); }
+            set
+            {
+                SetField(ref _SelectedIndex, value);
+                ((RelayCommand)RemoveProjectCommand).RaiseCanExecuteChanged();
+                ((RelayCommand)MoveItemUpCommand).RaiseCanExecuteChanged();
+                ((RelayCommand)MoveItemDownCommand).RaiseCanExecuteChanged();
+                ((RelayCommand)CalculateStatsCommand).RaiseCanExecuteChanged();
+                ((RelayCommand)SetProjectPathCommand).RaiseCanExecuteChanged();
+            }
         }
 
+        ICommand _StartStopBuildCommand;
+        public ICommand StartStopBuildCommand
+        {
+            get
+            {
+                return _StartStopBuildCommand ??
+                    (_StartStopBuildCommand = new RelayCommand(
+                        () => StartStopBuild(),
+                        () => config.Prjcfg.Count != 0
+                    ));
+            }
+        }
+
+        ICommand _AddProjectCommand;
+        public ICommand AddProjectCommand
+        {
+            get
+            {
+                return _AddProjectCommand ??
+                    (_AddProjectCommand = new RelayCommand(
+                        () => AddProject()
+                    ));
+            }
+        }
+
+        ICommand _RemoveProjectCommand;
+        public ICommand RemoveProjectCommand
+        {
+            get
+            {
+                return _RemoveProjectCommand ??
+                    (_RemoveProjectCommand = new RelayCommand(
+                        () => RemoveProject(),
+                        () => SelectedIndex != -1
+                    ));
+            }
+        }
+
+        ICommand _MoveItemUpCommand;
+        public ICommand MoveItemUpCommand
+        {
+            get
+            {
+                return _MoveItemUpCommand ??
+                    (_MoveItemUpCommand = new RelayCommand(
+                        () => MoveItem(-1),
+                        () => SelectedIndex > 0
+                    ));
+            }
+        }
+
+        ICommand _MoveItemDownCommand;
+        public ICommand MoveItemDownCommand
+        {
+            get
+            {
+                return _MoveItemDownCommand ??
+                    (_MoveItemDownCommand = new RelayCommand(
+                        () => MoveItem(1),
+                        () => SelectedIndex >= 0 && SelectedIndex + 1 < config.Prjcfg.Count
+                    ));
+            }
+        }
+
+        ICommand _RunScheduleCommand;
+        public ICommand RunScheduleCommand
+        {
+            get
+            {
+                return _RunScheduleCommand ??
+                    (_RunScheduleCommand = new RelayCommand(
+                        () => RunSchedule(),
+                        () => ScheduleTime != null && ScheduleTime.Value != null
+                    ));
+            }
+        }
+
+        ICommand _CalculateStatsCommand;
+        public ICommand CalculateStatsCommand
+        {
+            get
+            {
+                return _CalculateStatsCommand ??
+                    (_CalculateStatsCommand = new RelayCommand(
+                        () => CalculateStats(),
+                        () => SelectedIndex != -1
+                    ));
+            }
+        }
+
+        ICommand _FetchCommand;
+        public ICommand FetchCommand
+        {
+            get
+            {
+                return _FetchCommand ??
+                    (_FetchCommand = new RelayCommand(
+                        async () => await FetchAsync()
+                    ));
+            }
+        }
+
+        ICommand _SetProjectPathCommand;
+        public ICommand SetProjectPathCommand
+        {
+            get
+            {
+                return _SetProjectPathCommand ??
+                    (_SetProjectPathCommand = new RelayCommand(
+                        () => config.Prjcfg[SelectedIndex].ProjectPath = DialogService.Instance.OpenFileDialog(".sln", "Solution Files |*.sln"),
+                        () => SelectedIndex != -1
+                    ));
+            }
+        }
+
+        #region private methods
         Queue<Process> _BuildQueue = new Queue<Process>();
         Queue<Process> BuildQueue
         {
@@ -127,28 +254,31 @@ namespace BuildHelper
             return myWorkspace.Get(request, config.Tfscfg.FetchOptions);
         }
 
-        private void OnGettingEvent(object sender, GettingEventArgs status)
+        void OnGettingEvent(object sender, GettingEventArgs status)
         {
             if (status.Total == 0)
                 return;
 
             double current = (int)typeof(GettingEventArgs).GetProperty("Current", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(status, null);
             double progress = (current / status.Total);
-            Fetching(this, new FetchEventArgs(progress));
+            DialogService.Instance.UpdateProgressWindow(progress);
         }
 
-        public async Task FetchAsync()
+        async Task FetchAsync()
         {
             GetStatus getStat = null;
             try
             {
-                FetchBegin(this, EventArgs.Empty);
+                await DialogService.Instance.ShowProgressWindowAsync("Please wait", "Downloading...", false);
                 getStat = await Task.Run(() => Fetch());
             }
-            catch { }
+            catch (Exception ex)
+            {
+                DialogService.Instance.ShowMessageBox(ex.Message, "Exception", System.Windows.MessageBoxButton.OK);
+            }
             finally
             {
-                FetchCompleted(this, EventArgs.Empty);
+                DialogService.Instance.CloseProgressWindow();
             }
             if (getStat == null || getStat.NumFailures > 0 || getStat.NumWarnings > 0)
             {
@@ -162,7 +292,7 @@ namespace BuildHelper
                 ProcessOutput.Add("Successfully downloaded code");
         }
 
-        private void ProcExited(object sender, EventArgs e)
+        void ProcExited(object sender, EventArgs e)
         {
             string projName = (sender as Process).StartInfo.Arguments;
             TimeSpan buildtime = DateTime.Now - projstarttime;
@@ -181,12 +311,9 @@ namespace BuildHelper
                     StartBuild();
             }
         }
-
-        public void SwitchBuild()
+        
+        void StartStopBuild()
         {
-            if (config.Prjcfg.Count == 0)
-                return;
-
             if (BuildsLaunched)
                 StopBuild();
             else
@@ -195,19 +322,22 @@ namespace BuildHelper
 
         async void StartBuild()
         {
-            startTime = DateTime.Now;
-            timer.Start();
-            BuildsLaunched = true;
             try
             {
                 Process proc = BuildQueue.Peek();
+                startTime = DateTime.Now;
+                timer.Start();
                 proc.Start();
                 projstarttime = DateTime.Now;
+                BuildsLaunched = true;
                 string result;
                 while ((result = await proc.StandardOutput.ReadLineAsync()) != null)
                     ProcessOutput.Add(result);
             }
-            catch { }
+            catch (Exception ex)
+            {
+                DialogService.Instance.ShowMessageBox(ex.Message, "Exception", System.Windows.MessageBoxButton.OK);
+            }
         }
 
         void StopBuild()
@@ -219,19 +349,21 @@ namespace BuildHelper
             timer.Stop();
             ScheduleTimer.Stop();
         }
-
-        public void AddProject()
+        
+        void AddProject()
         {
             config.Prjcfg.Add(new Project());
             SelectedIndex = config.Prjcfg.Count - 1;
+            ((RelayCommand)StartStopBuildCommand).RaiseCanExecuteChanged();
         }
-
-        public void RemoveProject()
+        
+        void RemoveProject()
         {
             config.Prjcfg.RemoveAt(SelectedIndex);
+            ((RelayCommand)StartStopBuildCommand).RaiseCanExecuteChanged();
         }
-
-        public void MoveItem(int direction)
+                
+        void MoveItem(int direction)
         {
             // Checking selected item
             if (SelectedIndex < 0)
@@ -263,7 +395,7 @@ namespace BuildHelper
             }
         }
 
-        private static void KillProcessAndChildren(int pid)
+        static void KillProcessAndChildren(int pid)
         {
             ManagementObjectCollection moc = 
                 new ManagementObjectSearcher("Select * From Win32_Process Where ParentProcessID=" + pid).Get();
@@ -275,13 +407,16 @@ namespace BuildHelper
             {
                 Process.GetProcessById(pid).Kill();
             }
-            catch { }
+            catch (Exception ex)
+            {
+                DialogService.Instance.ShowMessageBox(ex.Message, "Exception", System.Windows.MessageBoxButton.OK);
+            }
         }
 
-        public DispatcherTimer timer { get; set; }
-        public DispatcherTimer ScheduleTimer { get; set; }
-        public DateTime startTime { get; set; }
-        public DateTime projstarttime { get; set; }
+        DispatcherTimer timer { get; set; }
+        DispatcherTimer ScheduleTimer { get; set; }
+        DateTime startTime { get; set; }
+        DateTime projstarttime { get; set; }
 
         public ApplicationViewModel()
         {
@@ -304,7 +439,7 @@ namespace BuildHelper
                 await FetchAsync();
             
             //launch builds
-            SwitchBuild();
+            StartStopBuild();
         }
 
         TimeSpan GetTriggerTimeSpan()
@@ -320,14 +455,11 @@ namespace BuildHelper
 
         void RunDaily()
         {
-            if (ScheduleTime.Value == null)
-                return;
-
             ScheduleTimer.Interval = GetTriggerTimeSpan();
             ScheduleTimer.Start();
         }
 
-        public void RunSchedule()
+        void RunSchedule()
         {
             if (ScheduleTimer.IsEnabled)
             {
@@ -338,16 +470,14 @@ namespace BuildHelper
                 RunDaily();
             }
         }
-
-        public void CalculateStats()
+        
+        void CalculateStats()
         {
-            if (SelectedIndex >= 0)
-            {
-                Stats stats = new Stats();
-                stats.Calculate(config.Prjcfg[SelectedIndex].BuildTimes);
-                MuTime = new TimeSpan((long)stats.Mu);
-                SigmaTime = new TimeSpan((long)stats.Sigma);
-            }
+            Stats stats = new Stats();
+            stats.Calculate(config.Prjcfg[SelectedIndex].BuildTimes);
+            MuTime = new TimeSpan((long)stats.Mu);
+            SigmaTime = new TimeSpan((long)stats.Sigma);
         }
+        #endregion
     }
 }

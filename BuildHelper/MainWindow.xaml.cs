@@ -21,80 +21,14 @@ namespace BuildHelper
     /// </summary>
     public partial class MainWindow : MetroWindow
     {
-        public ProgressDialogController controller { get; set; }
-
         ApplicationViewModel ContextViewModel
         {
             get { return (ApplicationViewModel)DataContext; }
         }
 
-        void ContextViewModel_Fetching(object sender, FetchEventArgs e)
-        {
-            controller.SetProgress(e.Progress);
-            controller.SetMessage((e.Progress * 100).ToString());
-        }
-
         public MainWindow()
         {
             InitializeComponent();
-            DataContext = new ApplicationViewModel();
-            pw_passwordbox.Password = ContextViewModel.config.Tfscfg.PassWord;
-            ContextViewModel.FetchBegin += async (s, e) => controller = await this.ShowProgressAsync("Please wait", "Downloading...", false);
-            ContextViewModel.Fetching += ContextViewModel_Fetching;
-            ContextViewModel.FetchCompleted += async (s, e) => await controller.CloseAsync();
-        }
-
-        private void LaunchButton_OnClick(object sender, EventArgs e)
-        {
-            ContextViewModel.SwitchBuild();
-        }
-
-        private void createProject_button_Click(object sender, RoutedEventArgs e)
-        {
-            ContextViewModel.AddProject();
-        }
-
-        private void removeproject_button_Click(object sender, RoutedEventArgs e)
-        {
-            ContextViewModel.RemoveProject();
-        }
-
-        private void rememberTFScfg_click(object sender, RoutedEventArgs e)
-        {
-            ContextViewModel.config.Tfscfg.PassWord = pw_passwordbox.Password;
-        }
-
-        private void On_moveup(object sender, RoutedEventArgs e)
-        {
-            ContextViewModel.MoveItem(-1);
-        }
-
-        private void On_movedown(object sender, RoutedEventArgs e)
-        {
-            ContextViewModel.MoveItem(1);
-        }
-
-        private void filedialog_button_Click(object sender, RoutedEventArgs e)
-        {
-            OpenFileDialog dlg = new OpenFileDialog
-            {
-                DefaultExt = ".sln",
-                Filter = "Solution Files |*.sln"
-            };
-
-            bool? result = dlg.ShowDialog();
-            if (result == true)
-                Projectpath_textbox.Text = dlg.FileName;
-        }
-
-        private void runschedule_btn_Click(object sender, RoutedEventArgs e)
-        {
-            ContextViewModel.RunSchedule();
-        }
-
-        private void calculatestats_btn_Click(object sender, RoutedEventArgs e)
-        {
-            ContextViewModel.CalculateStats();
         }
 
         private void pw_passwordbox_PasswordChanged(object sender, RoutedEventArgs e)
@@ -102,9 +36,9 @@ namespace BuildHelper
             ContextViewModel.config.Tfscfg.PassWord = ((PasswordBox)e.Source).Password;
         }
 
-        private async void fetchcode_button_Click(object sender, RoutedEventArgs e)
+        private void pw_passwordbox_Initialized(object sender, EventArgs e)
         {
-            await ContextViewModel.FetchAsync();
+            pw_passwordbox.Password = ContextViewModel.config.Tfscfg.PassWord;
         }
     }
 }
