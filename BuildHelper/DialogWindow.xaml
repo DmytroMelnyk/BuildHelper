@@ -1,0 +1,44 @@
+﻿<Controls:MetroWindow x:Name="DialogWindow1"
+                      x:Class="BuildHelper.DialogWindow"
+                      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                      xmlns:wpfTool="clr-namespace:Xceed.Wpf.Toolkit;assembly=Xceed.Wpf.Toolkit"
+                      xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity"
+                      xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
+                      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                      xmlns:Controls="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
+                      xmlns:tfs="clr-namespace:Microsoft.TeamFoundation.VersionControl.Client;assembly=Microsoft.TeamFoundation.VersionControl.Client"
+                      xmlns:sys="clr-namespace:System;assembly=mscorlib"
+                      EnableDWMDropShadow="True"
+                      Title="DialogWindow"
+                      Width="320"
+                      Height="320"
+                      WindowStartupLocation="CenterScreen"
+                      Background="#FF323232"
+                      WindowStyle="ThreeDBorderWindow"
+                      IconOverlayBehavior="Always">
+
+    <Controls:MetroWindow.Resources>
+        <sys:Boolean x:Key="BoolFalse"></sys:Boolean>
+        <sys:Boolean x:Key="BoolTrue">True</sys:Boolean>
+    </Controls:MetroWindow.Resources>
+    
+    <StackPanel>
+        <ContentControl Content="{Binding}" />
+        <Button x:Name="OKButton"
+                Style="{StaticResource AccentedSquareButtonStyle}"
+                Content="OK"
+                Margin="10,10,10,10"
+                Height="28"
+                Width="100">
+            <i:Interaction.Triggers>
+                <i:EventTrigger EventName="Click">
+                    <ei:ChangePropertyAction TargetObject="{Binding ElementName=DialogWindow1}"
+                                             PropertyName="DialogResult"
+                                             Value="True" />
+                </i:EventTrigger>
+            </i:Interaction.Triggers>
+        </Button>
+    </StackPanel>
+    
+    
+</Controls:MetroWindow>
