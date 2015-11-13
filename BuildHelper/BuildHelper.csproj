@@ -69,6 +69,7 @@
     <Reference Include="MahApps.Metro">
       <HintPath>..\packages\MahApps.Metro.1.1.2.0\lib\net45\MahApps.Metro.dll</HintPath>
     </Reference>
+    <Reference Include="Microsoft.Expression.Interactions, Version=4.5.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="Microsoft.Practices.ServiceLocation">
       <HintPath>..\packages\CommonServiceLocator.1.3\lib\portable-net4+sl5+netcore45+wpa81+wp8\Microsoft.Practices.ServiceLocation.dll</HintPath>
     </Reference>
@@ -117,6 +118,13 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Controls\AddProjectDialog.xaml.cs">
+      <DependentUpon>AddProjectDialog.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="DialogWindow.xaml.cs">
+      <DependentUpon>DialogWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Helpers\GettingEventArgsExtension.cs" />
     <Compile Include="ViewModel\CfgMan.cs" />
     <Compile Include="Helpers\ConverterHelpers.cs" />
     <Compile Include="Helpers\DialogService.cs" />
@@ -126,6 +134,14 @@
     <Compile Include="ViewModel\Stats.cs" />
     <Compile Include="ViewModel\TFSAccount.cs" />
     <Compile Include="ViewModel\ApplicationViewModel.cs" />
+    <Page Include="Controls\AddProjectDialog.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="DialogWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>

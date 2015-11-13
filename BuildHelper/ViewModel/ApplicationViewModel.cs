@@ -259,7 +259,7 @@ namespace BuildHelper
             if (status.Total == 0)
                 return;
 
-            double current = (int)typeof(GettingEventArgs).GetProperty("Current", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(status, null);
+            double current = status.GetCurrentStatic();
             double progress = (current / status.Total);
             DialogService.Instance.UpdateProgressWindow(progress);
         }
@@ -352,9 +352,14 @@ namespace BuildHelper
         
         void AddProject()
         {
-            config.Prjcfg.Add(new Project());
-            SelectedIndex = config.Prjcfg.Count - 1;
-            ((RelayCommand)StartStopBuildCommand).RaiseCanExecuteChanged();
+            var project = new Project();
+            bool dialogResult = DialogService.Instance.ShowDialog(project).Value;
+            if (dialogResult)
+            {
+                config.Prjcfg.Add(project);
+                SelectedIndex = config.Prjcfg.Count - 1;
+                ((RelayCommand)StartStopBuildCommand).RaiseCanExecuteChanged();
+            }
         }
         
         void RemoveProject()

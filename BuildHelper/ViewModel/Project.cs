@@ -1,7 +1,10 @@
-﻿using System;
+﻿using GalaSoft.MvvmLight.Command;
+using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Windows.Input;
 using System.Xml.Serialization;
 
 namespace BuildHelper
@@ -91,6 +94,18 @@ namespace BuildHelper
         public override string ToString()
         {
             return ProjectName;
+        }
+
+        ICommand _SetProjectPathCommand;
+        public ICommand SetProjectPathCommand
+        {
+            get
+            {
+                return _SetProjectPathCommand ??
+                    (_SetProjectPathCommand = new RelayCommand(
+                        () => ProjectPath = DialogService.Instance.OpenFileDialog(".sln", "Solution Files |*.sln")
+                    ));
+            }
         }
     }
 }

@@ -43,6 +43,7 @@
                 Height="28"
                 VerticalAlignment="Bottom"
                 HorizontalAlignment="Right"
+                IsEnabled="{Binding ValidatesOnDataErrors=True, ValidatesOnExceptions=True}"
                 Width="126">
             <Button.Style>
                 <Style BasedOn="{StaticResource AccentedSquareButtonStyle}" TargetType="{x:Type Button}">

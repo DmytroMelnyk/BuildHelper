@@ -17,6 +17,7 @@ namespace BuildHelper
         void UpdateProgressWindow(double progressValue);
         void CloseProgressWindow();
         string OpenFileDialog(string defaultExt, string filter);
+        bool? ShowDialog(Notifier viewModel);
         MessageBoxResult ShowMessageBox(string content, string title, MessageBoxButton buttons);
     }
 
@@ -82,6 +83,16 @@ namespace BuildHelper
                 return dlg.FileName;
 
             return String.Empty;
+        }
+
+        public bool? ShowDialog(Notifier viewModel)
+        {
+            return new DialogWindow()
+            {
+                DataContext = viewModel,
+                Owner = Application.Current.MainWindow,
+                ShowInTaskbar = false,
+            }.ShowDialog();
         }
     }
 }
