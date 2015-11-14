@@ -259,7 +259,7 @@ namespace BuildHelper
             if (status.Total == 0)
                 return;
 
-            double current = status.GetCurrentStatic();
+            double current = status.GetCurrent();
             double progress = (current / status.Total);
             DialogService.Instance.UpdateProgressWindow(progress);
         }
