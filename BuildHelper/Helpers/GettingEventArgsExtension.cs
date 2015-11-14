@@ -12,15 +12,15 @@ namespace BuildHelper
 
         static ParameterExpression parameter = Expression.Parameter(typeof(GettingEventArgs));
         static Expression property = Expression.Property(parameter, _CurrentPropertyInfo);
-        static UnaryExpression instanceCast = (!_CurrentPropertyInfo.DeclaringType.IsValueType) ? Expression.TypeAs(parameter, _CurrentPropertyInfo.DeclaringType) : Expression.Convert(parameter, _CurrentPropertyInfo.DeclaringType);
-        static Func<GettingEventArgs, int> GetDelegate = Expression.Lambda<Func<GettingEventArgs, int>>(Expression.TypeAs(Expression.Call(instanceCast, _CurrentPropertyInfo.GetGetMethod()), typeof(int)), parameter).Compile();
+        static UnaryExpression instanceCast = Expression.TypeAs(parameter, _CurrentPropertyInfo.DeclaringType);
+        static UnaryExpression returnValueCast = Expression.
+            Convert(Expression.Call(instanceCast, _CurrentPropertyInfo.GetGetMethod()), typeof(int));
+
+        static Func<GettingEventArgs, int> GetDelegate = Expression.
+            Lambda<Func<GettingEventArgs, int>>(returnValueCast, parameter).
+            Compile();
 
         static public int GetCurrent(this GettingEventArgs arg)
-        {
-            return (int)_CurrentPropertyInfo.GetValue(arg, null);
-        }
-
-        static public int GetCurrentStatic(this GettingEventArgs arg)
         {
             return GetDelegate(arg);
         }

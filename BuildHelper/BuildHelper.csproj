@@ -124,6 +124,7 @@
     <Compile Include="DialogWindow.xaml.cs">
       <DependentUpon>DialogWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Helpers\EnumFlagAttributesHelper.cs" />
     <Compile Include="Helpers\GettingEventArgsExtension.cs" />
     <Compile Include="ViewModel\CfgMan.cs" />
     <Compile Include="Helpers\ConverterHelpers.cs" />

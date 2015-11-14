@@ -11,7 +11,7 @@ namespace BuildHelper
     public abstract class Notifier : INotifyPropertyChanged
     {
         [field: NonSerialized]
-        public event PropertyChangedEventHandler PropertyChanged = delegate {};
+        public event PropertyChangedEventHandler PropertyChanged = delegate { };
 
         protected virtual void SetField<T>(ref T field, T value, [CallerMemberName] string propertyName = null)
         {
@@ -25,21 +25,14 @@ namespace BuildHelper
         protected virtual void SetField<T>(ref T flagField, bool setFlag, T flag, [CallerMemberName] string propertyName = null)
             where T : struct, IComparable, IFormattable, IConvertible
         {
-            if (!EnumFlagAttributesCache<T>.IsFlaggedEnum)
-                throw new ArgumentException("Type should be flagged enum");
-
-            dynamic dFlag = flag;
-            T newFlagField = setFlag ? (flagField | dFlag) : (flagField & ~dFlag);
+            T newFlagField = EnumFlagAttributesHelper<T>.ChangeFlag(flagField, flag, setFlag);
             SetField<T>(ref flagField, newFlagField, propertyName);
         }
     }
 
-    public static class EnumFlagAttributesCache<T>
-    {
-        static bool _IsFlaggedEnum = typeof(T).GetCustomAttributes(typeof(FlagsAttribute), false).Any();
-        public static bool IsFlaggedEnum
-        {
-            get { return _IsFlaggedEnum; }
-        }
-    }
+
+
+
+
+
 }
