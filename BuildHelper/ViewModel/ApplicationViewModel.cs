@@ -261,7 +261,8 @@ namespace BuildHelper
 
             double current = status.GetCurrent();
             double progress = (current / status.Total);
-            DialogService.Instance.UpdateProgressWindow(progress);
+            string message = String.Format("{0}\n{1}", progress.ToString("P2"), status.TargetLocalItem);
+            DialogService.Instance.UpdateProgressWindow(progress, message);
         }
 
         async Task FetchAsync()

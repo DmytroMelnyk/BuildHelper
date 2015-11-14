@@ -14,7 +14,7 @@ namespace BuildHelper
     public interface IDialogService
     {
         Task ShowProgressWindowAsync(string title, string message, bool isCancelable = false);
-        void UpdateProgressWindow(double progressValue);
+        void UpdateProgressWindow(double progressValue, string message);
         void CloseProgressWindow();
         string OpenFileDialog(string defaultExt, string filter);
         bool? ShowDialog(Notifier viewModel);
@@ -48,12 +48,12 @@ namespace BuildHelper
             return;
         }
 
-        public void UpdateProgressWindow(double progressValue)
+        public void UpdateProgressWindow(double progressValue, string message)
         {
             if (controller != null)
             {
                 controller.SetProgress(progressValue);
-                controller.SetMessage((progressValue * 100).ToString());
+                controller.SetMessage(message);
             }
         }
 

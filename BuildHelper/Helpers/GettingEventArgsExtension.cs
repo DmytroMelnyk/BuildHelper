@@ -9,20 +9,15 @@ namespace BuildHelper
     {
         static PropertyInfo _CurrentPropertyInfo = typeof(GettingEventArgs).
             GetProperty("Current", BindingFlags.NonPublic | BindingFlags.Instance);
-
-        static ParameterExpression parameter = Expression.Parameter(typeof(GettingEventArgs));
-        static Expression property = Expression.Property(parameter, _CurrentPropertyInfo);
-        static UnaryExpression instanceCast = Expression.TypeAs(parameter, _CurrentPropertyInfo.DeclaringType);
-        static UnaryExpression returnValueCast = Expression.
-            Convert(Expression.Call(instanceCast, _CurrentPropertyInfo.GetGetMethod()), typeof(int));
-
-        static Func<GettingEventArgs, int> GetDelegate = Expression.
-            Lambda<Func<GettingEventArgs, int>>(returnValueCast, parameter).
-            Compile();
+        static ParameterExpression _Parameter = Expression.Parameter(typeof(GettingEventArgs));
+        static MethodCallExpression _MethodCall = Expression.Call(_Parameter, _CurrentPropertyInfo.GetGetMethod(true));
+        static Func<GettingEventArgs, int> _GetDelegate = Expression.
+                    Lambda<Func<GettingEventArgs, int>>(_MethodCall, _Parameter).
+                    Compile();
 
         static public int GetCurrent(this GettingEventArgs arg)
         {
-            return GetDelegate(arg);
+            return _GetDelegate(arg);
         }
     }
 }
