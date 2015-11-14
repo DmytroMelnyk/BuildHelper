@@ -6,8 +6,8 @@ namespace BuildHelper.Helpers
 {
     public static class EnumFlagAttributesHelper<T>
     {
-        static Func<T, T, T> SetFlagDelegate;
-        static Func<T, T, T> ClearFlagDelegate;
+        static Func<T, T, T> _SetFlagDelegate;
+        static Func<T, T, T> _ClearFlagDelegate;
 
         static EnumFlagAttributesHelper()
         {
@@ -24,23 +24,23 @@ namespace BuildHelper.Helpers
             BinaryExpression clearFlagFieldOfUnderType = Expression.And(flagFieldParamCastToUnderType, Expression.Not(flagParamCastToUnderType));
             UnaryExpression clearFlagCovertedToOriginalType = Expression.Convert(clearFlagFieldOfUnderType, typeof(T));
 
-            SetFlagDelegate = Expression.Lambda<Func<T, T, T>>(setFlagCovertedToOriginalType, flagFieldParam, flagParam).Compile();
-            ClearFlagDelegate = Expression.Lambda<Func<T, T, T>>(clearFlagCovertedToOriginalType, flagFieldParam, flagParam).Compile();
+            _SetFlagDelegate = Expression.Lambda<Func<T, T, T>>(setFlagCovertedToOriginalType, flagFieldParam, flagParam).Compile();
+            _ClearFlagDelegate = Expression.Lambda<Func<T, T, T>>(clearFlagCovertedToOriginalType, flagFieldParam, flagParam).Compile();
         }
 
         public static T SetFlag(T flagField, T flag)
         {
-            return SetFlagDelegate(flagField, flag);
+            return _SetFlagDelegate(flagField, flag);
         }
 
         public static T ClearFlag(T flagField, T flag)
         {
-            return ClearFlagDelegate(flagField, flag);
+            return _ClearFlagDelegate(flagField, flag);
         }
 
         public static T ChangeFlag(T flagField, T flag, bool setFlag)
         {
-            return setFlag ? SetFlagDelegate(flagField, flag) : ClearFlagDelegate(flagField, flag);
+            return setFlag ? _SetFlagDelegate(flagField, flag) : _ClearFlagDelegate(flagField, flag);
         }
     }
 }
