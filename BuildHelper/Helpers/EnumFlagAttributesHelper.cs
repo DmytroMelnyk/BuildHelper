@@ -11,7 +11,7 @@ namespace BuildHelper.Helpers
 
         static EnumFlagAttributesHelper()
         {
-            if (!typeof(T).IsEnum || !typeof(T).GetCustomAttributes(typeof(FlagsAttribute), false).Any())
+            if (!typeof(T).IsEnum || !typeof(T).IsDefined(typeof(FlagsAttribute), false))
                 throw new ArgumentException("Type should be flagged enum");
 
             ParameterExpression flagFieldParam = Expression.Parameter(typeof(T));
